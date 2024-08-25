@@ -1,4 +1,4 @@
-import { ACTION_TYPE, GWENT_MODULE, MODULE, SKILL } from "./constants.js";
+import { ACTION_TYPE, GWENT_MODULE, MODULE } from "./constants.js";
 import { Utils } from "./utils.js";
 
 export let RollHandler = null
@@ -28,7 +28,7 @@ Hooks.once('tokenActionHudCoreApiReady', async (coreModule) => {
                     actor.sheet._onItemRoll.call(actor.sheet, null, itemId);
                     break;
                 case ACTION_TYPE.defense:
-                    actor.sheet._onDefenceRoll.call(actor.sheet);
+                    actor.sheet._onDefenseRoll.call(actor.sheet);
                     break;
                 case ACTION_TYPE.initiative:
                     actor.rollInitiative({ createCombatants: true, rerollInitiative: true });
@@ -51,30 +51,13 @@ Hooks.once('tokenActionHudCoreApiReady', async (coreModule) => {
                     }
                     break;
                 case ACTION_TYPE.skill:
-                    const statNum = Number(args[0]);
-                    const skillNum = Number(args[1]);
-                    try {
-                        if (Utils.getSetting('rollSkillsNatively')) {
-                            // This will throw an error, if the system does not expose this method (which is the case in v0.96 and lower).
-                            // Handling for Stexinators fork https://github.com/Stexinator/TheWitcherTRPG
-                            if(!CONFIG.WITCHER?.skillMap) {
-                                actor.sheet._onSkillRoll.call(actor.sheet, statNum, skillNum);
-                            } else {
-                                actor.sheet._onSkillRoll.call(actor.sheet, CONFIG.WITCHER.skillMap[args[0]]);
-                            }
-                        } else {
-                            await this._backupSkillRoll(actor, statNum, skillNum);
-                        }
-                    } catch (e) {
-                        await this._backupSkillRoll(actor, statNum, skillNum);
-                    }
+                    actor.sheet._onSkillRoll.call(actor.sheet, CONFIG.WITCHER.skillMap[args[0]]);
                     break;
                 case ACTION_TYPE.professionSkill:
-                    const skillName = args[0];
-                    _event = this._createProfessionSkillEvent(actor, skillName);
+                    _event = this._createProfessionSkillEvent(actor, args[0]);
                     // right click
                     if (event.which == 3) {
-                        const skill = this._getProfessionSkill(actor, skillName);
+                        const skill = this._getProfessionSkill(actor, args[0]);
                         const btn = {
                             label: Utils.i18n('WITCHER.Dialog.ButtonRoll'),
                             callback: () => actor.sheet._onProfessionRoll.call(actor.sheet, _event)
@@ -249,6 +232,8 @@ Hooks.once('tokenActionHudCoreApiReady', async (coreModule) => {
             }
         }
 
+        // TODO: rollInstantly
+        // TODO: can be used on right click
         /** Fallback method when using TheWitcherTRPG v0.96 or older, since it doesn't expose the `_onSkillRoll`-Method. */
         async _backupSkillRoll(actor, statNum, skillNum) {
             const skills = Object.values(SKILL).map(skillSet => Object.entries(skillSet).map(([id, skill]) => ({ ...skill, id }))).flat();
